@@ -9,8 +9,12 @@ import numpy as np
 
 from mlp import MLP
 from neisum import NeiSum
+from neiatt import NeiAtt
 
 raw_data = geop.read_file('./PlanBlocksR5_v2neighbors.shp')
+
+lr = 1e-9
+load_prev_best = True
 
 
 def generate_sparse_matrix(neighbors):
@@ -108,14 +112,17 @@ def train_model(model_name, model, optim, n):
 
 models = {
     'mlp': MLP,
-    'neisum': NeiSum
+    'neisum': NeiSum,
+    'neiatt': NeiAtt,
 }
 
 
 def train(model_name='mlp'):
     model = models[model_name]()
+    if load_prev_best:
+        model.load_state_dict(torch.load('best_{}.pt'.format(model_name)))
     model.cuda()
-    optim1 = torch.optim.Adam(model.parameters(), lr=1e-6)
+    optim1 = torch.optim.Adam(model.parameters(), lr=lr)
     train_model(model_name, model, optim1, 200000)
 
 

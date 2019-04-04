@@ -32,8 +32,7 @@ class NeiSum(nn.Module):
         ratio = self.fc3(x)
         delta = self.fc4(x)
         original_x = x_in[:, 0].reshape(-1, 1)
-        return ratio * original_x * delta
-        return x
+        return ratio * original_x + delta
 
     def loss(self, out, std, is_train=False):
         out = out.reshape_as(std)
