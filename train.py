@@ -13,8 +13,8 @@ from neiatt import NeiAtt
 
 raw_data = geop.read_file('./PlanBlocksR5_v2neighbors.shp')
 
-lr = 1e-9
-load_prev_best = True
+lr = 1e-6
+load_prev_best = False # True
 
 
 def generate_sparse_matrix(neighbors):
@@ -140,4 +140,4 @@ def predict(model_name='mlp'):
 
 if __name__ == '__main__':
     init_data()
-    train('neisum')
+    train('neiatt')
