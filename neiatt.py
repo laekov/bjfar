@@ -7,7 +7,7 @@ from neisum import NeiSum
 
 
 n_features = 512
-n_repeat = 2
+n_repeat = 4
 
 p_dropout = .9
 
@@ -21,7 +21,7 @@ class NeiAtt(NeiSum):
         ind = g._indices()
         exp_x = x[ind[0]]
         exp_y = self.attention_fc(x)[ind[1]]
-        wei = (exp_x * exp_y).sum(dim=1)
+        wei = (exp_x * exp_y).sum(dim=1) * g._values()
         return torch.sparse.FloatTensor(ind, wei, g.shape)
         
     def forward(self, x_in, adjacent_matrix):
