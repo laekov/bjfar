@@ -11,10 +11,24 @@ from mlp import MLP
 from neisum import NeiSum
 from neiatt import NeiAtt
 
+import time
+
+import argparse
+
+parser = argparse.ArgumentParser(description='Train the model.')
+parser.add_argument('-m', '--model', required=True)
+parser.add_argument('-l', '--lr', type=float, default=3e-8)
+parser.add_argument('--load', type=bool, default=True)
+
+args = parser.parse_args()
+
 raw_data = geop.read_file('./PlanBlocksR5_v2neighbors.shp')
 
-lr = 1e-6
-load_prev_best = False # True
+lr = args.lr
+load_prev_best = args.load
+model_name = args.model
+
+print('Training mode {} with lr = {}'.format(model_name, lr))
 
 
 def generate_sparse_matrix(neighbors):
@@ -90,14 +104,19 @@ def train_model(model_name, model, optim, n):
     labels = torch.tensor(datas[:, -2]).float().cuda()
     losses = []
     min_validate = 1e10
+    if load_prev_best:
+        min_validate = model.validate(train_datas, labels, adjacent_matrix)
+        print('Previous best loss = {}'.format(min_validate))
     no_down_cnt = 0
     for i in range(n):
+        train_begin = time.time()
         loss = model.train_iter(optim, train_datas, labels, adjacent_matrix)
         losses.append(loss)
+        train_end = time.time()
         if i % 10 == 0:
             loss_validate = model.validate(train_datas, labels, adjacent_matrix)
-            print('Iteration {} Mean training loss = {}, Validate loss = {}'
-                  .format(i, np.mean(losses), loss_validate))
+            print('Iteration {} Mean training loss = {}, Validate loss = {}, time = {} s'
+                  .format(i, np.mean(losses), loss_validate, train_end - train_begin))
             if loss_validate < min_validate:
                 torch.save(model.state_dict(), 'best_{}.pt'.format(model_name))
                 min_validate = loss_validate
@@ -114,6 +133,7 @@ models = {
     'mlp': MLP,
     'neisum': NeiSum,
     'neiatt': NeiAtt,
+    'neiatt2': NeiAtt,
 }
 
 
@@ -140,4 +160,4 @@ def predict(model_name='mlp'):
 
 if __name__ == '__main__':
     init_data()
-    train('neiatt')
+    train(model_name)
