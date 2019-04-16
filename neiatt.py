@@ -9,7 +9,7 @@ from neisum import NeiSum
 n_features = 512
 n_repeat = 4
 
-p_dropout = .95
+p_dropout = .98
 
 
 class NeiAtt(NeiSum):

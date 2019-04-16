@@ -15,29 +15,13 @@ import time
 
 import argparse
 
-parser = argparse.ArgumentParser(description='Train the model.')
-parser.add_argument('-m', '--model', required=True)
-parser.add_argument('-l', '--lr', type=float, default=3e-8)
-parser.add_argument('-r', '--ring', type=int, default=0)
-parser.add_argument('--load', type=int, default=1)
-
-args = parser.parse_args()
-
-
-lr = args.lr
-load_prev_best = args.load
-model_name = args.model
-min_ring = args.ring
-
 
 def generate_sparse_matrix(neighbors):
-    id_map = dict()
     xs = []
     ys = []
     ws = []
     for i, n in enumerate(neighbors):
         idx = int(n[0])
-        id_map[idx] = i
         w = 1. / len(n[1].split(';'))
         for j in n[1].split(';'):
             if len(j) == 0:
@@ -53,15 +37,12 @@ def get_geop_cols(indices):
     return np.array(geop.GeoDataFrame(raw_data[indices]))
 
 
-def init_data():
+def init_data(min_ring=0):
     global raw_data, datas, adjacent_matrix, ids, id_map
 
     raw_data = geop.read_file('planblocksR5_v3/planblocksR5_v3.shp')
-    raw_data = raw_data[raw_data['r5id'].isin(list(range(min_ring, 6)))]
+    raw_data = raw_data[raw_data['r5id'].isin(list(range(min_ring, 6)))].reset_index()
     n = len(raw_data)
-
-    print('Training mode {} with lr = {} total datas = {}'.format(model_name, lr,
-                                                                  n))
 
     neighbors = np.array(geop.GeoDataFrame(raw_data[['Block_ID', 'neighbors']]))
     ids = get_geop_cols('Block_ID')
@@ -108,6 +89,7 @@ def init_data():
                 [w for i, w in enumerate(edgew) if edge_valid[i]],
                 dtype=torch.float32),
             (n, n)).cuda()
+    return raw_data
 
 
 def train_model(model_name, model, optim, n):
@@ -175,5 +157,23 @@ def predict(model_name='mlp'):
 
 
 if __name__ == '__main__':
-    init_data()
+    parser = argparse.ArgumentParser(description='Train the model.')
+    parser.add_argument('-m', '--model', default='mlp', required=True)
+    parser.add_argument('-l', '--lr', type=float, default=3e-8)
+    parser.add_argument('-r', '--ring', type=int, default=0)
+    parser.add_argument('--load', type=int, default=1)
+
+    args = parser.parse_args()
+
+
+    lr = args.lr
+    load_prev_best = args.load
+    model_name = args.model
+    min_ring = args.ring
+
+    init_data(min_ring)
+
+    print('Training mode {} with lr = {} total datas = {}'.format(model_name, lr,
+                                                                  len(datas)))
+
     train(model_name)

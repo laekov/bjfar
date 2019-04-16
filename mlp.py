@@ -37,14 +37,14 @@ class MLP(nn.Module):
     def loss(self, out, std):
         out = out.reshape(-1)
         sse = ((out - std)**2).sum()
-        ss0 = ((out - out.mean())**2).sum()
-        return sse / ss0
+        # ss0 = ((out - out.mean())**2).sum()
+        return sse
 
     def train_iter(model, optim, datas, labels, graph):
         di = get_divide_idx(datas)
         model.train()
         train_data = datas[:di]
-        np.random.shuffle(train_data)
+        # np.random.shuffle(train_data)
         losses = []
         for i in range(0, di, batch_size):
             data = train_data[i:i+batch_size]
