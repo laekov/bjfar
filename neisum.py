@@ -21,13 +21,20 @@ class NeiSum(nn.Module):
         self.bn = nn.BatchNorm1d(n_features)
         self.train_mask = None
         
-    def forward(self, x_in, adjacent_matrix):
+    def forward(self, x_in, adjacent_matrix, predict=False):
         x = torch.relu(self.fc1(x_in))
         x_init = x
+        processes = []
         for _ in range(n_repeat):
             nei_x = torch.sparse.mm(adjacent_matrix, x)
             x = torch.cat((x, nei_x), dim=1)
             x = torch.relu(self.bn(self.fc2(x)))
+            if predict is not None:
+                nx = torch.cat((x, x_init), dim=1)
+                ratio = self.fc3(nx)
+                delta = self.fc4(nx)
+                original_x = x_in[:, 0].reshape(-1, 1)
+                predict.append(ratio * original_x + delta)
         x = torch.cat((x, x_init), dim=1)
         ratio = self.fc3(x)
         delta = self.fc4(x)

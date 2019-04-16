@@ -26,7 +26,7 @@ class MLP(nn.Module):
         self.bn = nn.BatchNorm1d(n_features)
         self.fc3 = nn.Linear(n_features, 1)
         
-    def forward(self, x_in, adjacent_matrix=None):
+    def forward(self, x_in, adjacent_matrix=None, predict=False):
         x = torch.relu(self.fc1(x_in))
         for _ in range(n_repeat):
             x = torch.relu(self.bn(self.fc2(x)))

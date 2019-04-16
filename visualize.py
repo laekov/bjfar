@@ -17,21 +17,26 @@ from train import init_data, train, predict
 
 
 class Visualize(object):
-    def __init__(self, model_name, minring=0):
-        raw_data = init_data(minring)
+    def __init__(self, model_name, minring=0, raw_data=None):
+        levels = [0., .4, .6, 1., 2.4, 4., 6.]
+        raw_data = init_data(minring, data=raw_data)
 
-        predictions, labels = predict(model_name)
-        predictions = np.array(predictions)
+        years = []
+        pred, labels = predict(model_name, years)
+        predictions = np.array(pred)
+        if len(years) > 0:
+            y = dict({})
+            for i in range(len(years)):
+                pi = np.digitize(years[i], levels)
+                y['d_year_{}'.format(i)] = pi
+            raw_data = raw_data.join(geop.GeoDataFrame(y))
         self.preds = predictions
         labels = np.array(labels)
         self.label = labels
 
-
-
         self.r2 = stats.linregress(predictions, labels)[2]** 2
         
         self.error = labels - predictions
-        levels = [0., .4, .6, 1., 2.4, 4., 6.]
         self.d_label = np.digitize(labels, levels)
         self.d_preds = np.digitize(predictions, levels)
         
@@ -43,8 +48,6 @@ class Visualize(object):
             'lvl_truth': self.d_label,
         })
 
-        print(len(raw_data))
-        print(len(prediction_df))
         self.df = raw_data.join(prediction_df)
     
     def plot_map(self, col):
@@ -58,13 +61,16 @@ class Visualize(object):
         ax.set_title('Level difference 2017')
     
     def plot_district(self, coors, colname='error', title='Detailed level difference 2017', vmin=-6, vmax=6, cmap='coolwarm'):
-        xs, ys = coors
-        # Paint subplot in wangjing
-        corners = [(xs[0], ys[0]), (xs[0], ys[1]), (xs[1], ys[1]), (xs[1], ys[0])]
-        wangjing = geop.GeoSeries([Polygon(corners)])
-        wangjing = geop.GeoDataFrame({'geometry': wangjing})
+        if coors is not None:
+            xs, ys = coors
+            # Paint subplot in wangjing
+            corners = [(xs[0], ys[0]), (xs[0], ys[1]), (xs[1], ys[1]), (xs[1], ys[0])]
+            wangjing = geop.GeoSeries([Polygon(corners)])
+            wangjing = geop.GeoDataFrame({'geometry': wangjing})
 
-        res = geop.overlay(self.df, wangjing, how='intersection')
+            res = geop.overlay(self.df, wangjing, how='intersection')
+        else:
+            res = self.df
 
         ax = res.plot(column=colname, vmin=vmin, vmax=vmax, figsize=(16, 9), legend=True, cmap=cmap)
         ax.set_title(title)

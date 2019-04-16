@@ -24,7 +24,7 @@ class NeiAtt(NeiSum):
         wei = (exp_x * exp_y).sum(dim=1) * g._values()
         return torch.sparse.FloatTensor(ind, wei, g.shape)
         
-    def forward(self, x_in, adjacent_matrix):
+    def forward(self, x_in, adjacent_matrix, predict=False):
         x = torch.relu(self.fc1(x_in))
         x_init = x
         for _ in range(n_repeat):

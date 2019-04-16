@@ -37,11 +37,14 @@ def get_geop_cols(indices):
     return np.array(geop.GeoDataFrame(raw_data[indices]))
 
 
-def init_data(min_ring=0):
+def init_data(min_ring=0, data=None):
     global raw_data, datas, adjacent_matrix, ids, id_map
 
-    raw_data = geop.read_file('planblocksR5_v3/planblocksR5_v3.shp')
-    raw_data = raw_data[raw_data['r5id'].isin(list(range(min_ring, 6)))].reset_index()
+    if data is None:
+        raw_data = geop.read_file('planblocksR5_v3/planblocksR5_v3.shp')
+        raw_data = raw_data[raw_data['r5id'].isin(list(range(min_ring, 6)))].reset_index()
+    else:
+        raw_data = data
     n = len(raw_data)
 
     neighbors = np.array(geop.GeoDataFrame(raw_data[['Block_ID', 'neighbors']]))
@@ -144,16 +147,23 @@ def train(model_name='mlp'):
     train_model(model_name, model, optim1, 200000)
 
 
-def predict(model_name='mlp'):
+def predict(model_name='mlp', p_years=None):
     global datas, adjacent_matrix, ids, id_map
     model = models[model_name]()
     model.load_state_dict(torch.load('best_{}.pt'.format(model_name)))
     model.cuda().eval()
-    prediction_tensor = model(torch.tensor(datas[:, :-2]).float().cuda(), adjacent_matrix)
+    d_years = []
+    prediction_tensor = model(torch.tensor(datas[:, :-2]).float().cuda(), adjacent_matrix, predict=d_years)
     predictions = prediction_tensor.cpu().detach().numpy().reshape(-1)
     preds = [predictions[id_map[int(li)]] for li in ids]
+
+    if len(d_years) > 0 and p_years is not None:
+        for y in d_years:
+            y = y.cpu().detach().numpy().reshape(-1)
+            p = [y[id_map[int(li)]] for li in ids]
+            p_years.append(p)
     labels = [datas[id_map[int(li)], -2] for li in ids]
-    return preds, labels
+    return np.array(preds), np.array(labels)
 
 
 if __name__ == '__main__':
