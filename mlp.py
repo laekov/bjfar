@@ -12,6 +12,12 @@ n_repeat = 2
 batch_size = 64
 
 
+def get_divide_idx(datas):
+    n = len(datas)
+    p = (n - 1000) // batch_size * batch_size
+    return p
+
+
 class MLP(nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
@@ -35,12 +41,13 @@ class MLP(nn.Module):
         return sse / ss0
 
     def train_iter(model, optim, datas, labels, graph):
-
+        di = get_divide_idx(datas)
         model.train()
+        train_data = datas[:di]
         np.random.shuffle(train_data)
         losses = []
-        for i in range(0, 20000, batch_size):
-            data = datas[i:i+batch_size]
+        for i in range(0, di, batch_size):
+            data = train_data[i:i+batch_size]
             label = labels[i:i+batch_size]
             out = model(data, graph)
             loss = model.loss(out, label)
@@ -50,9 +57,10 @@ class MLP(nn.Module):
         return np.mean(losses)
 
     def validate(model, datas, labels, graph):
-        valid_data, valid_label = datas[20000:], datas[20000:]
+        di = get_divide_idx(datas)
+        valid_data, valid_label = datas[di:], labels[di:]
         model.eval()
-        out = model(data, adjacent_matrix)
-        loss = model.loss(out, label)
+        out = model(valid_data, graph)
+        loss = model.loss(out, valid_label)
         return loss
 

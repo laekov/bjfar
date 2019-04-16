@@ -18,17 +18,16 @@ import argparse
 parser = argparse.ArgumentParser(description='Train the model.')
 parser.add_argument('-m', '--model', required=True)
 parser.add_argument('-l', '--lr', type=float, default=3e-8)
-parser.add_argument('--load', type=bool, default=True)
+parser.add_argument('-r', '--ring', type=int, default=0)
+parser.add_argument('--load', type=int, default=1)
 
 args = parser.parse_args()
 
-raw_data = geop.read_file('./PlanBlocksR5_v2neighbors.shp')
 
 lr = args.lr
 load_prev_best = args.load
 model_name = args.model
-
-print('Training mode {} with lr = {}'.format(model_name, lr))
+min_ring = args.ring
 
 
 def generate_sparse_matrix(neighbors):
@@ -49,13 +48,20 @@ def generate_sparse_matrix(neighbors):
     return xs, ys, ws
 
 
-
 def get_geop_cols(indices):
+    global raw_data
     return np.array(geop.GeoDataFrame(raw_data[indices]))
 
 
 def init_data():
-    global datas, adjacent_matrix, ids, id_map
+    global raw_data, datas, adjacent_matrix, ids, id_map
+
+    raw_data = geop.read_file('planblocksR5_v3/planblocksR5_v3.shp')
+    raw_data = raw_data[raw_data['r5id'].isin(list(range(min_ring, 6)))]
+    n = len(raw_data)
+
+    print('Training mode {} with lr = {} total datas = {}'.format(model_name, lr,
+                                                                  n))
 
     neighbors = np.array(geop.GeoDataFrame(raw_data[['Block_ID', 'neighbors']]))
     ids = get_geop_cols('Block_ID')
@@ -92,10 +98,16 @@ def init_data():
     for i, blk in enumerate(datas[:, -1]):
         id_map[int(blk)] = i
 
-    n = datas.shape[0]
+    edge_valid = [x in id_map and y in id_map for x, y in zip(edgex, edgey)]
     adjacent_matrix = torch.sparse.FloatTensor(
-        torch.LongTensor([[id_map[x] for x in edgex], [id_map[y] for y in edgey]]),
-        torch.tensor(np.array(edgew), dtype=torch.float32), (n, n)).cuda()
+        torch.LongTensor([
+                [id_map[x] for i, x in enumerate(edgex) if edge_valid[i]], 
+                [id_map[y] for i, y in enumerate(edgey) if edge_valid[i]]
+            ]), 
+            torch.tensor(
+                [w for i, w in enumerate(edgew) if edge_valid[i]],
+                dtype=torch.float32),
+            (n, n)).cuda()
 
 
 def train_model(model_name, model, optim, n):
@@ -131,6 +143,10 @@ def train_model(model_name, model, optim, n):
 
 models = {
     'mlp': MLP,
+    'mlp2': MLP,
+    'mlp3': MLP,
+    'mlp4': MLP,
+    'mlp5': MLP,
     'neisum': NeiSum,
     'neiatt': NeiAtt,
     'neiatt2': NeiAtt,

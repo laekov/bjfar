@@ -13,8 +13,13 @@ import matplotlib.pyplot as plt
 from shapely.geometry import Polygon
 
 
+from train import init_data, train, predict
+
+
 class Visualize(object):
     def __init__(self, model_name):
+        raw_data = geop.read_file('planblocksR5_v3/planblocksR5_v3.shp')
+
         predictions, labels = predict(model_name)
         predictions = np.array(predictions)
         self.preds = predictions
@@ -40,15 +45,15 @@ class Visualize(object):
     
     def plot_map(self, col):
         ax = self.df.plot(column=col, vmin=0, vmax=5 if col[0:3] != 'lvl' else 7,
-                          figsize=(15, 15), legend=True, cmap='cool')
+                          figsize=(16, 9), legend=True, cmap='cool')
         ax.set_title(col)
 
     def plot_whole_lvl_error(self):
         # Plot error level graph
-        ax = self.df.plot(column='lvlerror', vmin=-6, vmax=6, figsize=(15, 15), legend=True, cmap='coolwarm')
+        ax = self.df.plot(column='lvlerror', vmin=-6, vmax=6, figsize=(16, 9), legend=True, cmap='coolwarm')
         ax.set_title('Level difference 2017')
     
-    def plot_district(self, coors, colname='error'):
+    def plot_district(self, coors, colname='error', title='Detailed level difference 2017', vmin=-6, vmax=6, cmap='coolwarm'):
         xs, ys = coors
         # Paint subplot in wangjing
         corners = [(xs[0], ys[0]), (xs[0], ys[1]), (xs[1], ys[1]), (xs[1], ys[0])]
@@ -57,11 +62,12 @@ class Visualize(object):
 
         res = geop.overlay(self.df, wangjing, how='intersection')
 
-        ax = res.plot(column=colname, vmin=-6, vmax=6, figsize=(15, 15), legend=True, cmap='coolwarm')
-        ax.set_title('Detailed level difference 2017')
+        ax = res.plot(column=colname, vmin=vmin, vmax=vmax, figsize=(16, 9), legend=True, cmap=cmap)
+        ax.set_title(title)
 
     def statistics(self):
         print('R^2 = {}'.format(self.r2))
+        print('Level accuracy = {}'.format(np.mean(self.d_preds == self.d_label)))
         print('Mean error = {}'.format(np.mean(np.abs(self.error))))
         print('Mean level difference = {}'.format(np.abs(np.mean((self.d_label == self.d_preds)))))
 
@@ -71,14 +77,14 @@ class Visualize(object):
         d_tam = np.digitize(d_tam, np.arange(0, 10, 1.))
         xls = np.arange(0, 11, 1.)
         yls = [np.mean([error[i] for i in range(len(d_tam)) if d_tam[i] == lvl]) for lvl in xls]
-        plt.plot(xls, yls)
+        return plt.plot(xls, yls)
 
     def regression(self):
         plt.scatter(predictions, labels)
         
     def error_plot(self):
         d_error = np.array(self.df['lvlerror']).reshape(-1)
-        sns.distplot(d_error)
+        sns.distplot(d_error, kde=False)
         
 
 
