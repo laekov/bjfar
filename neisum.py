@@ -21,7 +21,7 @@ class NeiSum(nn.Module):
         self.bn = nn.BatchNorm1d(n_features)
         self.train_mask = None
         
-    def forward(self, x_in, adjacent_matrix, predict=False):
+    def forward(self, x_in, adjacent_matrix, predict=None):
         x = torch.relu(self.fc1(x_in))
         x_init = x
         processes = []

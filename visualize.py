@@ -16,6 +16,13 @@ from shapely.geometry import Polygon
 from train import init_data, train, predict
 
 
+def crop_df(coors, df):
+    xs, ys = coors
+    corners = [(xs[0], ys[0]), (xs[0], ys[1]), (xs[1], ys[1]), (xs[1], ys[0])]
+    geo = geop.GeoDataFrame({'geometry': [Polygon(corners)]})
+    return geop.overlay(df, geo, how='intersection')
+    
+
 class Visualize(object):
     def __init__(self, model_name, minring=0, raw_data=None):
         levels = [0., .4, .6, 1., 2.4, 4., 6.]
@@ -59,21 +66,17 @@ class Visualize(object):
         # Plot error level graph
         ax = self.df.plot(column='lvlerror', vmin=-6, vmax=6, figsize=(16, 9), legend=True, cmap='coolwarm')
         ax.set_title('Level difference 2017')
+
     
     def plot_district(self, coors, colname='error', title='Detailed level difference 2017', vmin=-6, vmax=6, cmap='coolwarm'):
         if coors is not None:
-            xs, ys = coors
-            # Paint subplot in wangjing
-            corners = [(xs[0], ys[0]), (xs[0], ys[1]), (xs[1], ys[1]), (xs[1], ys[0])]
-            wangjing = geop.GeoSeries([Polygon(corners)])
-            wangjing = geop.GeoDataFrame({'geometry': wangjing})
-
-            res = geop.overlay(self.df, wangjing, how='intersection')
+            res = crop_df(coors, self.df)
         else:
             res = self.df
 
         ax = res.plot(column=colname, vmin=vmin, vmax=vmax, figsize=(16, 9), legend=True, cmap=cmap)
         ax.set_title(title)
+        return ax
 
     def statistics(self):
         print('R^2 = {}'.format(self.r2))

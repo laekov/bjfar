@@ -135,6 +135,10 @@ models = {
     'neisum': NeiSum,
     'neiatt': NeiAtt,
     'neiatt2': NeiAtt,
+    'neiatt3': NeiAtt,
+    'neiatt4': NeiAtt,
+    'neiatt5': NeiAtt,
+    'neiatt6': NeiAtt,
 }
 
 
